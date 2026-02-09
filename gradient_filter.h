@@ -2,6 +2,7 @@
 #define GRADIENT_FILTER_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 // Scale a grade value. If negative (descent), multiply by scale_factor.
 // grade is in FTMS units (0.01%), e.g. -800 = -8.00%

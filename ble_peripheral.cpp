@@ -154,7 +154,6 @@ void peripheral_init() {
     NimBLEAdvertising* adv = NimBLEDevice::getAdvertising();
     adv->addServiceUUID(FTMS_SERVICE_UUID);
     adv->setName("FTMS Proxy");
-    adv->setScanResponse(true);
     adv->start();
 
     Serial.println("[Peripheral] Advertising as 'FTMS Proxy'");
