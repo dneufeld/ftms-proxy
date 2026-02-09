@@ -26,4 +26,7 @@ void central_loop();
 // Forward a control point write to the trainer
 bool central_write_control_point(const uint8_t* data, size_t len);
 
+// Get RSSI of the trainer connection (returns 0 if not connected)
+int central_get_rssi();
+
 #endif // BLE_CENTRAL_H

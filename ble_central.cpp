@@ -1,6 +1,7 @@
 #include "ble_central.h"
 #include "ble_peripheral.h"
 #include "ftms_defs.h"
+#include "proxy_stats.h"
 #include <Arduino.h>
 
 TrainerCharCache g_trainer_cache = {};
@@ -19,11 +20,13 @@ static void start_scan();
 
 static void bike_data_notify_cb(NimBLERemoteCharacteristic* chr,
                                  uint8_t* data, size_t len, bool isNotify) {
+    g_stats.notifications_relayed++;
     peripheral_notify_bike_data(data, len);
 }
 
 static void status_notify_cb(NimBLERemoteCharacteristic* chr,
                               uint8_t* data, size_t len, bool isNotify) {
+    g_stats.notifications_relayed++;
     peripheral_notify_status(data, len);
 }
 
@@ -32,13 +35,14 @@ static void status_notify_cb(NimBLERemoteCharacteristic* chr,
 class ClientCallbacks : public NimBLEClientCallbacks {
     void onConnect(NimBLEClient* client) override {
         Serial.println("[Central] Connected to trainer");
+        g_stats.trainer_connects++;
     }
 
     void onDisconnect(NimBLEClient* client, int reason) override {
         Serial.printf("[Central] Disconnected from trainer (reason=%d)\n", reason);
         g_trainer_connected = false;
         s_control_point_char = nullptr;
-        // Restart scanning after a brief delay (handled in loop)
+        g_stats.trainer_disconnects++;
     }
 };
 
@@ -229,4 +233,11 @@ bool central_write_control_point(const uint8_t* data, size_t len) {
     }
 
     return s_control_point_char->writeValue(data, len, true); // true = wait for response (write with response)
+}
+
+int central_get_rssi() {
+    if (!g_trainer_connected || !s_client || !s_client->isConnected()) {
+        return 0;
+    }
+    return s_client->getRssi();
 }

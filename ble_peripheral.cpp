@@ -2,6 +2,7 @@
 #include "ble_central.h"
 #include "ftms_defs.h"
 #include "gradient_filter.h"
+#include "proxy_stats.h"
 #include <Arduino.h>
 
 // Defined in main sketch
@@ -21,6 +22,7 @@ class ServerCallbacks : public NimBLEServerCallbacks {
         Serial.printf("[Peripheral] Client connected: %s\n",
                       connInfo.getAddress().toString().c_str());
         g_zwift_connected = true;
+        g_stats.zwift_connects++;
         // Allow additional connections (Zwift sometimes opens multiple)
         NimBLEDevice::startAdvertising();
     }
@@ -28,6 +30,7 @@ class ServerCallbacks : public NimBLEServerCallbacks {
     void onDisconnect(NimBLEServer* server, NimBLEConnInfo& connInfo, int reason) override {
         Serial.printf("[Peripheral] Client disconnected (reason=%d)\n", reason);
         g_zwift_connected = false;
+        g_stats.zwift_disconnects++;
         NimBLEDevice::startAdvertising();
     }
 };
@@ -50,21 +53,28 @@ class ControlPointCallbacks : public NimBLECharacteristicCallbacks {
         uint8_t opcode = buf[0];
 
         if (opcode == FTMS_OP_SET_INDOOR_BIKE_SIM && len >= SIM_PARAMS_LENGTH) {
-            // Extract original grade for logging
+            // Extract all sim params for logging
+            int16_t wind_speed = (int16_t)(buf[1] | (buf[2] << 8));
             int16_t orig_grade = (int16_t)(buf[SIM_PARAMS_GRADE_OFFSET] |
                                            (buf[SIM_PARAMS_GRADE_OFFSET + 1] << 8));
+            uint8_t rolling_res = buf[5];
+            uint8_t wind_res = buf[6];
 
             bool modified = process_sim_params(buf, len, g_descent_scale_factor);
 
             if (modified) {
                 int16_t new_grade = (int16_t)(buf[SIM_PARAMS_GRADE_OFFSET] |
                                               (buf[SIM_PARAMS_GRADE_OFFSET + 1] << 8));
-                Serial.printf("[Filter] Grade: %d -> %d (%.1f%% -> %.1f%%)\n",
+                Serial.printf("[Filter] Grade: %d -> %d (%.1f%% -> %.1f%%) | "
+                              "Wind: %.1f m/s | CRR: %.4f | CW: %.2f kg/m\n",
                               orig_grade, new_grade,
-                              orig_grade / 100.0, new_grade / 100.0);
+                              orig_grade / 100.0, new_grade / 100.0,
+                              wind_speed / 1000.0, rolling_res / 10000.0, wind_res / 100.0);
+                g_stats.grades_modified++;
             } else {
-                Serial.printf("[Filter] Grade: %d (%.1f%%) — no change\n",
-                              orig_grade, orig_grade / 100.0);
+                Serial.printf("[Sim] Grade: %.1f%% | Wind: %.1f m/s | CRR: %.4f | CW: %.2f kg/m\n",
+                              orig_grade / 100.0,
+                              wind_speed / 1000.0, rolling_res / 10000.0, wind_res / 100.0);
             }
         } else if (opcode == FTMS_OP_SET_TARGET_POWER && len >= 3) {
             int16_t power = (int16_t)(buf[1] | (buf[2] << 8));
@@ -80,13 +90,13 @@ class ControlPointCallbacks : public NimBLECharacteristicCallbacks {
         // Forward to trainer
         if (!central_write_control_point(buf, len)) {
             Serial.println("[Peripheral] Failed to forward to trainer");
-            // Send error response to Zwift
+            g_stats.write_errors++;
             uint8_t resp[] = { FTMS_OP_RESPONSE_CODE, opcode, FTMS_RESULT_OPERATION_FAIL };
             chr->indicate(resp, sizeof(resp));
             return;
         }
 
-        // Send success response to Zwift
+        g_stats.packets_forwarded++;
         uint8_t resp[] = { FTMS_OP_RESPONSE_CODE, opcode, FTMS_RESULT_SUCCESS };
         chr->indicate(resp, sizeof(resp));
     }
