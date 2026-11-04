@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+mkdir -p build
+c++ -std=c++11 -Wall -Wextra -Werror -I. tests/test_gradient_filter.cpp gradient_filter.cpp settings.cpp -o build/test-gradient
+build/test-gradient
+c++ -std=c++11 -Wall -Wextra -Werror -I. tests/test_settings.cpp gradient_filter.cpp settings.cpp -o build/test-settings
+build/test-settings
+c++ -std=c++11 -Wall -Wextra -Werror -Itests/stubs -I. tests/test_bridge.cpp gradient_filter.cpp settings.cpp -o build/test-bridge
+build/test-bridge

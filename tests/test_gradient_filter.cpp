@@ -1,5 +1,5 @@
 // Host-side unit tests for gradient_filter.
-// Compile and run: g++ -std=c++11 -o test_gradient_filter test_gradient_filter.cpp gradient_filter.cpp && ./test_gradient_filter
+// Compile and run from the repository root: ./scripts/test-host
 
 #include "gradient_filter.h"
 #include "ftms_defs.h"
@@ -97,15 +97,15 @@ void test_negative_grade_scale_one() {
 
 void test_negative_grade_small() {
     TEST(filter_grade: small negative grade);
-    // -1 * 0.5 = -0.5, truncated to 0
-    ASSERT_EQ(filter_grade(-1, 0.5), 0);
+    // Half units round away from zero.
+    ASSERT_EQ(filter_grade(-1, 0.5), -1);
     PASS();
 }
 
 void test_negative_grade_odd() {
-    TEST(filter_grade: odd negative grade rounds toward zero);
-    // -3 * 0.5 = -1.5, truncated to -1
-    ASSERT_EQ(filter_grade(-3, 0.5), -1);
+    TEST(filter_grade: odd negative grade rounds to nearest);
+    // -3 * 0.5 = -1.5, rounded to -2
+    ASSERT_EQ(filter_grade(-3, 0.5), -2);
     PASS();
 }
 

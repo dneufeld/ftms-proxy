@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+# Stage only firmware sources: Arduino otherwise compiles host tests/main().
+stage=$(mktemp -d)
+trap 'rm -rf "$stage"' EXIT
+mkdir "$stage/ftms-proxy"
+cp ./*.ino ./*.cpp ./*.h "$stage/ftms-proxy/"
+arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=huge_app --jobs 2 --output-dir "$PWD/build/firmware" "$@" "$stage/ftms-proxy"

@@ -1,2 +1,8 @@
-test_gradient_filter
 build/
+*.bin
+*.elf
+*.map
+secrets.h
+node_modules/
+package-lock.json
+test_gradient_filter
