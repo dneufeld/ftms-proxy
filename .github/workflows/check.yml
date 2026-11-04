@@ -1,0 +1,31 @@
+name: firmware and host checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/test-host
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install --no-save --package-lock=false playwright@1.64.1
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/test_settings_ui.cjs
+  esp32:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Install pinned firmware dependencies
+        run: |
+          arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32@3.3.12
+          arduino-cli lib install NimBLE-Arduino@2.3.7
+      - run: ./scripts/build-firmware

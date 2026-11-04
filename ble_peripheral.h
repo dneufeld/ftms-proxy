@@ -1,17 +1,11 @@
-#ifndef BLE_PERIPHERAL_H
-#define BLE_PERIPHERAL_H
-
+#pragma once
 #include <NimBLEDevice.h>
-
-extern bool g_zwift_connected;
-
-// Initialize peripheral role (call after central_init, once trainer cache is valid)
+#include <atomic>
+extern std::atomic<bool> g_zwift_connected;
 void peripheral_init();
-
-// Notify Zwift with indoor bike data from the trainer
+void peripheral_loop();
+void peripheral_trainer_lost();
 void peripheral_notify_bike_data(const uint8_t* data, size_t len);
-
-// Notify Zwift with fitness machine status from the trainer
 void peripheral_notify_status(const uint8_t* data, size_t len);
-
-#endif // BLE_PERIPHERAL_H
+void peripheral_notify_training(const uint8_t* data, size_t len);
+void peripheral_control_response(const uint8_t* data, size_t len);

@@ -1,16 +1,15 @@
-#ifndef GRADIENT_FILTER_H
-#define GRADIENT_FILTER_H
-
+#pragma once
 #include <stdint.h>
 #include <stddef.h>
-
-// Scale a grade value. If negative (descent), multiply by scale_factor.
-// grade is in FTMS units (0.01%), e.g. -800 = -8.00%
+#include "settings.h"
 int16_t filter_grade(int16_t grade, float scale_factor);
-
-// Process a full Indoor Bike Simulation Parameters packet (opcode 0x11).
-// Modifies the grade field in-place if it's negative.
-// Returns true if the grade was modified.
 bool process_sim_params(uint8_t* data, size_t len, float scale_factor);
-
-#endif // GRADIENT_FILTER_H
+class GradeFilter {
+    bool initialized = false, ramp = false;
+    uint32_t start = 0;
+    int16_t previous = 0, from = 0;
+public:
+    void reset() { initialized = ramp = false; }
+    int16_t apply(int16_t grade, const Settings& s, uint32_t now);
+    bool process(uint8_t* data, size_t len, const Settings& s, uint32_t now);
+};
